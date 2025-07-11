@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>حجوزات فنادق الإمارات</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    body { font-family: Arial; margin: 0; padding: 0; background: #f4f4f4; direction: rtl; }
+    header { background: #0077b6; color: white; padding: 20px; text-align: center; }
+    .container { padding: 20px; max-width: 1000px; margin: auto; }
+    .search-box, .booking-form { background: white; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: center; }
+    .search-box input[type="text"], .booking-form input, .booking-form select {
+      padding: 10px; width: 70%; font-size: 16px; margin-bottom: 10px;
+    }
+    .search-box button, .booking-form button {
+      padding: 10px 20px; font-size: 16px; background: #0077b6; color: white; border: none; cursor: pointer;
+    }
+    .hotel-card {
+      background: white; border-radius: 10px; padding: 15px; margin-bottom: 20px;
+      display: flex; gap: 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .hotel-card img { width: 200px; border-radius: 10px; }
+    .hotel-info { flex-grow: 1; }
+    .hotel-info h3 { margin: 0 0 10px; }
+    .hotel-info p { margin: 5px 0; }
+    .hotel-info a, .hotel-info button {
+      display: inline-block; margin-top: 10px; padding: 8px 12px;
+      background: #00b4d8; color: white; text-decoration: none; border: none; border-radius: 5px;
+    }
+    .booking-number { font-weight: bold; color: green; margin-top: 15px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>موقع حجوزات فنادق الإمارات</h1>
+    <p>احجز فنادق في دبي، أبوظبي، الشارقة، عجمان، أم القيوين، رأس الخيمة، الفجيرة</p>
+  </header>
+
+  <div class="container">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="ابحث عن فندق أو مدينة...">
+      <button onclick="searchHotels()">بحث</button>
+    </div>
+
+    <div class="booking-form">
+      <h2>احجز الآن</h2>
+      <input type="text" id="name" placeholder="اسمك الكامل"><br>
+      <input type="date" id="checkin"><br>
+      <input type="number" id="nights" placeholder="عدد الليالي"><br>
+      <select id="hotelSelect">
+        <option value="فندق العنوان وسط المدينة - دبي">فندق العنوان وسط المدينة - دبي</option>
+        <option value="فيرمونت باب البحر - أبوظبي">فيرمونت باب البحر - أبوظبي</option>
+        <option value="فندق البيت - الشارقة">فندق البيت - الشارقة</option>
+        <option value="فندق عجمان سراي - عجمان">فندق عجمان سراي - عجمان</option>
+        <option value="فندق بالم بيتش - أم القيوين">فندق بالم بيتش - أم القيوين</option>
+        <option value="فندق والدورف أستوريا - رأس الخيمة">فندق والدورف أستوريا - رأس الخيمة</option>
+        <option value="فندق ومنتجع إنتركونتيننتال - الفجيرة">فندق ومنتجع إنتركونتيننتال - الفجيرة</option>
+      </select><br>
+      <button onclick="payNow()">ادفع الآن</button>
+      <div id="bookingNumber" class="booking-number"></div>
+    </div>
+  </div>
+
+  <script>
+    function searchHotels() {
+      const query = document.getElementById("searchInput").value.toLowerCase();
+      const hotels = document.querySelectorAll(".hotel-card");
+      hotels.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? "flex" : "none";
+      });
+    }
+
+    function generateBookingNumber() {
+      const now = Date.now();
+      const rand = Math.floor(Math.random() * 1000);
+      return 'HB-' + now.toString().slice(-6) + '-' + rand.toString().padStart(3, '0');
+    }
+
+    async function payNow() {
+      const stripe = Stripe("pk_live_51RijhlH2dyreol9noAPbHaBtSTCIZU4Q2szbwBKrrjrf8IrIJEhuyRhy8fgMDuKj7BkqrnywHpqAEdGTiWgaiQ2n00Sf0NnCDK");
+
+      const bookingNumber = generateBookingNumber();
+      document.getElementById("bookingNumber").innerText = 'رقم الحجز الخاص بك: ' + bookingNumber;
+
+      const { error } = await stripe.redirectToCheckout({
+        lineItems: [{ price: 'price_1Rijx6H2dyreol9n7d1qEXAMPLE', quantity: 1 }],
+        mode: 'payment',
+        successUrl: window.location.href + '?success=true&booking=' + bookingNumber,
+        cancelUrl: window.location.href + '?canceled=true',
+      });
+
+      if (error) {
+        alert('حدث خطأ أثناء الدفع: ' + error.message);
+      }
+    }
+  </script>
+
+  <div id="confirmation" class="container" style="display:none; background:#d4edda; border:1px solid #c3e6cb; padding:20px; border-radius:8px; color:#155724; margin-bottom: 40px;">
+    <h2>✅ تم الحجز بنجاح!</h2>
+    <p>شكرًا لك. تم تأكيد حجزك. سيتم إرسال التفاصيل إلى بريدك الإلكتروني.</p>
+    <p id="confirmBookingNumber"></p>
+  </div>
+
+  <script>
+    // عرض صفحة التأكيد إذا كان الرابط يحتوي على success
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') {
+      const booking = urlParams.get('booking');
+      document.querySelector('.booking-form').style.display = 'none';
+      document.getElementById('confirmation').style.display = 'block';
+      document.getElementById('confirmBookingNumber').innerText = 'رقم الحجز الخاص بك: ' + booking;
+    }
+  </script>
+</body>
+
+</html>
